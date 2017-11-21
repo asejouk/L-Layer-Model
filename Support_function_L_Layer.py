@@ -42,11 +42,11 @@ def relu(Z):
     A=np.maximum(0,Z)
     return A,Z
 
-def softmax(x):
+def softmax(Z):
     
-    A=np.exp(x)/np.sum(np.exp(x),axis=0).reshape((1,x.shape[1]))
+    A=np.exp(Z)/np.sum(np.exp(Z),axis=0).reshape((1,Z.shape[1]))
     
-    return A
+    return A,Z
     
     
 def linear_activation_forward(A_prev,W,b,activation):
@@ -58,6 +58,10 @@ def linear_activation_forward(A_prev,W,b,activation):
     elif activation == "relu":
         Z,linear_cache=linear_forward(A_prev,W,b)
         A,activation_cache=relu(Z)
+        
+    elif activation == "softmax":
+        Z,linear_cache=linear_forward(A_prev,W,b)
+        A,activation_cache=softmax(Z)
         
     cache=(linear_cache,activation_cache)
     return A,cache
@@ -74,7 +78,7 @@ def L_model_forward(X,parameters):
     
     # The last layer is sigmoid the for loop goes from 1 to (L-1)
     
-    AL, cache=linear_activation_forward(A,parameters["W"+str(L)],parameters["b"+str(L)],"sigmoid")
+    AL, cache=linear_activation_forward(A,parameters["W"+str(L)],parameters["b"+str(L)],"softmax")
     caches.append(cache)
     return AL,caches
 
@@ -94,7 +98,7 @@ def L_model_forward_with_dropout(X,parameters,keep_prob):
      
     # The last layer is sigmoid the for loop goes from 1 to (L-1)
 
-    AL, cache=linear_activation_forward(A,parameters["W"+str(L)],parameters["b"+str(L)],"sigmoid")
+    AL, cache=linear_activation_forward(A,parameters["W"+str(L)],parameters["b"+str(L)],"softmax")
     caches.append(cache)
     return AL,caches
 
@@ -102,9 +106,7 @@ def compute_cost(AL,Y):
     
     m=Y.shape[1]
     
-    #cost=(np.dot(Y,np.log(AL.T))+np.dot((1-Y),np.log(1-AL).T))/-m
-    #cost = (np.sum(Y*np.log(AL)) + np.sum((1-Y)*np.log(1-AL)))/-m
-    cost = np.sum(Y*np.log(AL)+(1-Y)*np.log(1-AL),axis=1)/-m
+    cost = np.sum(np.diagonal(np.matmul(Y.T,np.log(AL))))/-m
     return cost
 
 
@@ -114,12 +116,14 @@ def compute_cost_with_regularization(AL,Y,parameters,lambd):
     L=len(parameters)//2
     L2_regularization_cost=0
     
-    cross_entropy_cost = np.sum(Y*np.log(AL)+(1-Y)*np.log(1-AL),axis=1)/-m
+    cross_entropy_cost = np.sum(np.diagonal(np.matmul(Y.T,np.log(AL))))/-m
     
     for i in range(1,L+1):
         
         L2_regularization_cost += 0.5*lambd*np.sum(np.square(parameters["W"+str(i)]))/m
+    
     cost=cross_entropy_cost+L2_regularization_cost
+    
     return cost
 
 def linear_backward(dZ, cache):
@@ -153,7 +157,11 @@ def linear_activation_backward(dA,cache,activation):
         
     elif activation=="sigmoid":
         dZ=sigmoid_backward(dA,activation_cache)
-        dA_prev,dW,db=linear_backward(dZ,linear_cache)    
+        dA_prev,dW,db=linear_backward(dZ,linear_cache)  
+        
+    elif activation=="softmax":
+        dZ=dA
+        dA_prev,dW,db=linear_backward(dZ,linear_cache)
     return dA_prev, dW, db
 
 def L_model_backward(AL,Y,caches):
@@ -162,10 +170,11 @@ def L_model_backward(AL,Y,caches):
     grads1={}
     L=len(caches)
     Y = Y.reshape(AL.shape)
-    dAL=np.divide((AL-Y),AL*(1-AL))
+    dAL=np.divide(Y,AL)
+    dZ=AL-Y                         # We calculate directly dZ here instade of passing dAL in the linear_activation_backward function. 
     grads["dA"+str(L)]=dAL
     current_cache=caches[L-1]
-    dA_prev, dW_temp, db_temp=linear_activation_backward(dAL,current_cache,"sigmoid")
+    dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax") # we pass dZ only for softmax option as output
     grads["dA"+str(L-1)]=dA_prev
     grads["dW"+str(L)]=dW_temp
     grads["db"+str(L)]=db_temp
@@ -185,17 +194,18 @@ def L_model_backward(AL,Y,caches):
         
     
     
-    return grads,grads1
+    return grads
 
 def L_model_backward_with_dropout(AL,Y,caches,keep_prob):
     
     grads={}
     L=len(caches) # For L=3 
     Y = Y.reshape(AL.shape)
-    dAL=np.divide((AL-Y),AL*(1-AL))
+    dAL=np.divide(Y,AL)
+    dZ=AL-Y
     grads["dA"+str(L)]=dAL # Than this is dA3
     current_cache=caches[L-1]# This index into 2 (starts from 0
-    dA_prev, dW_temp, db_temp=linear_activation_backward(dAL,current_cache,"sigmoid") #dA3 out put dA2
+    dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax") 
     grads["dA"+str(L-1)]=dA_prev # This is than dA2
     grads["dW"+str(L)]=dW_temp # This is dW3
     grads["db"+str(L)]=db_temp
@@ -216,14 +226,15 @@ def L_model_backward_with_regularization(AL,Y,caches,lambd):
     grads={}
     L=len(caches)
     Y = Y.reshape(AL.shape)
-    dAL=np.divide((AL-Y),np.multiply(AL,(1-AL)))
+    dAL=np.divide(Y,AL)
+    dZ=AL-Y
     grads["dA"+str(L)]=dAL
     current_cache=caches[L-1]
     # Regularization input
     temp_1,temp_2=current_cache
     A_temp,W_temp,b_temp=temp_1
     m=Y.shape[1]
-    dA_prev, dW_temp, db_temp=linear_activation_backward(dAL,current_cache,"sigmoid")
+    dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax")
     grads["dA"+str(L-1)]=dA_prev
     grads["dW"+str(L)]=dW_temp+(lambd*W_temp/m)
     grads["db"+str(L)]=db_temp
@@ -248,23 +259,62 @@ def update_parameters(parameters,grads,learning_rate):
         
     return parameters
 
-def predict(X,Y,parameters):
 
+
+def initialize_adam(parameters):
     
-    m = X.shape[1]
-    Y_prediction = np.zeros((1,m))
-    AL, caches= L_model_forward(X,parameters)
+    L=len(parameters)//2
+    v={}
+    s={}
     
-    for i in range(AL.shape[1]):
+    for i in range(L):
         
-        Y_prediction[np.where(AL>0.5)]=1
-        Y_prediction[np.where(AL<=0.5)]=0
-    
-    accuracy= (100 - np.mean(np.abs(Y_prediction - Y)) * 100)
-    
-    return Y_prediction, accuracy
-    
+        # initialize momentum v dictionary
+        v["dW" + str(i+1)] = np.zeros((parameters["W"+str(i+1)].shape[0],parameters["W"+str(i+1)].shape[1]))
+        v["db"+str(i+1)]=np.zeros((parameters["b"+str(i+1)].shape[0],parameters["b"+str(i+1)].shape[1]))
+        
+        # initialize RMS Prop s dictionary 
+        s["dW"+str(i+1)]=np.zeros((parameters["W"+str(i+1)].shape[0],parameters["W"+str(i+1)].shape[1]))
+        s["db"+str(i+1)]=np.zeros((parameters["b"+str(i+1)].shape[0],parameters["b"+str(i+1)].shape[1]))
+        
+    return v,s
 
+def update_parameters_with_adam(parameters,grads,v,s,t,learning_rate=0.01,beta1=0.9,beta2=0.999,epsilon=1e-8):
+    
+    
+    L=len(parameters)//2    # number of layers 
+    v_corrected={}
+    s_corrected={}
+    for i in range(L):
+        # First we update v dictionary 
+        v["dW"+str(i+1)]=beta1*v["dW"+str(i+1)]+(1-beta1)*grads["dW"+str(i+1)]
+        v["db"+str(i+1)]=beta1*v["db"+str(i+1)]+(1-beta1)*grads["db"+str(i+1)]
+        
+        # bias correction 
+        v_corrected["dW"+str(i+1)]=v["dW"+str(i+1)]/(1-np.power(beta1,t))
+        v_corrected["db"+str(i+1)]=v["db"+str(i+1)]/(1-np.power(beta1,t))
+        
+        # Update s dictionary 
+        s["dW"+str(i+1)]=beta2*s["dW"+str(i+1)]+(1-beta2)*np.square(grads["dW"+str(i+1)])
+        s["db"+str(i+1)]=beta2*s["db"+str(i+1)]+(1-beta2)*np.square(grads["db"+str(i+1)])
+        
+        # bias correction 
+        s_corrected["dW"+str(i+1)]=s["dW"+str(i+1)]/(1-np.power(beta2,t))
+        s_corrected["db"+str(i+1)]=s["db"+str(i+1)]/(1-np.power(beta2,t))
+        
+        parameters["W"+str(i+1)]=parameters["W"+str(i+1)]-(learning_rate*v_corrected["dW"+str(i+1)]/np.sqrt(s_corrected["dW"+str(i+1)]+epsilon))
+        parameters["b"+str(i+1)]=parameters["b"+str(i+1)]-(learning_rate*v_corrected["db"+str(i+1)]/np.sqrt(s_corrected["db"+str(i+1)]+epsilon))
+        
+    return parameters, v, s
+
+
+
+
+
+
+
+# Mini batch algorithm 
+    
 def random_mini_batches(X,Y,mini_batch_size,seed):
     
     np.random.seed(seed)
@@ -294,52 +344,34 @@ def random_mini_batches(X,Y,mini_batch_size,seed):
         
     return mini_batches
 
-def initialize_adam(parameters):
-    
-    L=len(parameters)//2
-    v={}
-    s={}
-    
-    for i in range(L):
-        
-        # initialize momentum v dictionary
-        v["dW" + str(i+1)] = np.zeros((parameters["W"+str(i+1)].shape[0],parameters["W"+str(i+1)].shape[1]))
-        v["db"+str(i+1)]=np.zeros((parameters["b"+str(i+1)].shape[0],parameters["b"+str(i+1)].shape[1]))
-        
-        # initialize RMS Prop s dictionary 
-        s["dW"+str(i+1)]=np.zeros((parameters["W"+str(i+1)].shape[0],parameters["W"+str(i+1)].shape[1]))
-        s["db"+str(i+1)]=np.zeros((parameters["b"+str(i+1)].shape[0],parameters["b"+str(i+1)].shape[1]))
-        
-    return v,s
 
-def update_parameters_with_adam(parameters,grads,v,s,t,learning_rate=0.01,beta1=0.9,beta2=0.999,epsilon=1e-8):
+
+
+
+
+
+
+# Prediction algorithm 
     
+def predict(X,Y,parameters):
+
     
-    L=len(parameters)//2    # number of layers 
-    v_corrected={}
-    s_corrected={}
+    Y_prediction = np.zeros((Y.shape))
+    AL, caches= L_model_forward(X,parameters)
     
-    for i in range(L):
-        # First we update v dictionary 
-        v["dW"+str(i+1)]=beta1*v["dW"+str(i+1)]+(1-beta1)*grads["dW"+str(i+1)]
-        v["db"+str(i+1)]=beta1*v["db"+str(i+1)]+(1-beta1)*grads["db"+str(i+1)]
-        
-        # bias correction 
-        v_corrected["dW"+str(i+1)]=v["dW"+str(i+1)]/(1-np.power(beta1,t))
-        v_corrected["db"+str(i+1)]=v["db"+str(i+1)]/(1-np.power(beta1,t))
-        
-        # Update s dictionary 
-        s["dW"+str(i+1)]=beta2*s["dW"+str(i+1)]+(1-beta2)*np.square(grads["dW"+str(i+1)])
-        s["db"+str(i+1)]=beta2*s["db"+str(i+1)]+(1-beta2)*np.square(grads["db"+str(i+1)])
-        
-        # bias correction 
-        s_corrected["dW"+str(i+1)]=s["dW"+str(i+1)]/(1-np.power(beta2,t))
-        s_corrected["db"+str(i+1)]=s["db"+str(i+1)]/(1-np.power(beta2,t))
-        
-        parameters["W"+str(i+1)]=parameters["W"+str(i+1)]-(learning_rate*v_corrected["dW"+str(i+1)]/np.sqrt(s_corrected["dW"+str(i+1)]+epsilon))
-        parameters["b"+str(i+1)]=parameters["b"+str(i+1)]-(learning_rate*v_corrected["db"+str(i+1)]/np.sqrt(s_corrected["db"+str(i+1)]+epsilon))
-        
-    return parameters, v, s
+    temp=np.amax(AL,axis=0).reshape((1,AL.shape[1]))
+    Y_prediction[np.where(AL == temp)]=1
+    Y_prediction[np.where(AL != temp)]=0
+    
+    accuracy= (100 - np.mean(np.abs(Y_prediction - Y)) * 100)
+    
+    return Y_prediction, accuracy
+
+
+
+
+
+
 
 
 ## Gradient Check algorithm
@@ -371,7 +403,7 @@ def vector_to_dictionary(theta,key_shape,key_list):
     """
     parameters = {}
     a=0
-    #key_list=list(keys.keys())
+    
     for key in key_list:
         b=key_shape[key][0]*key_shape[key][1]+a
         parameters[key] = theta[a:b].reshape(key_shape[key])
@@ -383,8 +415,10 @@ def gradients_to_vector(gradients):
     """
     Roll all our gradients dictionary into a single vector satisfying our specific required shape.
     """
+    
     key_list=list(gradients.keys())
     count = 0
+    
     for key in key_list:
         # flatten parameter
         new_vector = np.reshape(gradients[key], (-1,1))
@@ -424,6 +458,7 @@ def gradient_check(parameters,grad,X,Y):
     
     grad_temp=vector_to_dictionary(gradapprox,key_shape,key_list)
     for key in key_list:
+        bp()
         numerator = np.linalg.norm(grad[key]-grad_temp[key])
         denominator = np.linalg.norm(grad[key])+np.linalg.norm(grad_temp[key])
         difference = numerator/denominator
