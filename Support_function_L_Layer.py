@@ -15,6 +15,7 @@ import math
 from pdb import set_trace as bp
 np.random.seed(1)
 
+
 def initialize_parameters_deep(layer_dims):
     # This uses xavier initilizer, objective is to keep var(input) and var(output) the same sq(2/n(input layer))
     parameters={}
@@ -164,6 +165,7 @@ def linear_activation_backward(dA,cache,activation):
         dA_prev,dW,db=linear_backward(dZ,linear_cache)
     return dA_prev, dW, db
 
+
 def L_model_backward(AL,Y,caches):
     
     grads={}
@@ -192,9 +194,7 @@ def L_model_backward(AL,Y,caches):
         grads1["W"+str(i+1)]=dW_temp
         grads1["b"+str(i+1)]=db_temp
         
-    
-    
-    return grads
+    return grads,grads1
 
 def L_model_backward_with_dropout(AL,Y,caches,keep_prob):
     
@@ -218,7 +218,6 @@ def L_model_backward_with_dropout(AL,Y,caches,keep_prob):
         grads["dW"+str(i+1)]=dW_temp # first loop dW2, second loop dW1
         grads["db"+str(i+1)]=db_temp
         
-    
     return grads
 
 def L_model_backward_with_regularization(AL,Y,caches,lambd):
@@ -306,6 +305,8 @@ def update_parameters_with_adam(parameters,grads,v,s,t,learning_rate=0.01,beta1=
         parameters["b"+str(i+1)]=parameters["b"+str(i+1)]-(learning_rate*v_corrected["db"+str(i+1)]/np.sqrt(s_corrected["db"+str(i+1)]+epsilon))
         
     return parameters, v, s
+
+
 
 
 
@@ -458,7 +459,6 @@ def gradient_check(parameters,grad,X,Y):
     
     grad_temp=vector_to_dictionary(gradapprox,key_shape,key_list)
     for key in key_list:
-        bp()
         numerator = np.linalg.norm(grad[key]-grad_temp[key])
         denominator = np.linalg.norm(grad[key])+np.linalg.norm(grad_temp[key])
         difference = numerator/denominator

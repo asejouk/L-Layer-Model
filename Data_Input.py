@@ -69,8 +69,8 @@ parameters=L_layer_model_with_adam(X_train,Y_train,layers_dims,learning_rate,min
 Y_pred_train, accuracy_train=predict(X_train,Y_train,parameters)
 Y_pred_test, accuracy_test=predict(X_test,Y_test,parameters)
     
-print("Training set accuracy =" + str(accuracy_train))
-print("Test set accuracy =" + str(accuracy_test))
+print("Training set accuracy = " + str(accuracy_train))
+print("Test set accuracy = " + str(accuracy_test))
 
 
 

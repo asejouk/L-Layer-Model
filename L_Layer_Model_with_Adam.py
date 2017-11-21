@@ -15,7 +15,14 @@ from PIL import Image
 from scipy import ndimage
 #from dnn_app_utils_v2 import
 
-# Call support Function
+# This is a L-layer-model 
+
+# This model has the option of dropout regularization, select model="Dropout"
+# This model has the option of L2 regularization, select model="L2_Reg"
+# This model uses Adam for parameters updates
+# This model uses minibatch gradient descent 
+# Gradient check algorithm included, check performed at first 100 iteration 
+
 
 def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_size,number_iter,lambd,keep_prob,model,print_cost):
     
@@ -24,6 +31,7 @@ def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_
     
     v,s = initialize_adam(parameters)
     t=0
+    check=0
     seed=10
     
     # loop gradient descent
@@ -62,14 +70,14 @@ def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_
                 grads= L_model_backward_with_dropout(AL,minibatch_Y,caches,keep_prob)
             
             else:
-                grads =L_model_backward(AL,minibatch_Y,caches)
+                grads, grads1 =L_model_backward(AL,minibatch_Y,caches)
             
-            
+            check +=1
             # Gradient Check 
-            if i == 100:
-                difference=gradient_check(parameters,grads,minibatch_X,minibatch_Y)
+            if check == 100:
+                difference=gradient_check(parameters,grads1,minibatch_X,minibatch_Y)
         
-            # Update Parameters
+             Update Parameters
         
             t = t + 1 # Adam counter
             parameters, v, s = update_parameters_with_adam(parameters, grads, v, s,t, learning_rate)
