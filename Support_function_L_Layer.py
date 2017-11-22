@@ -173,13 +173,15 @@ def L_model_backward(AL,Y,caches):
     L=len(caches)
     Y = Y.reshape(AL.shape)
     dAL=np.divide(Y,AL)
-    dZ=AL-Y                         # We calculate directly dZ here instade of passing dAL in the linear_activation_backward function. 
+    dZ=AL-Y                               # We calculate directly dZ here instade of passing dAL in the linear_activation_backward function. 
     grads["dA"+str(L)]=dAL
     current_cache=caches[L-1]
-    dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax") # we pass dZ only for softmax option as output
+    dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax") # We pass dZ only for softmax option as output
     grads["dA"+str(L-1)]=dA_prev
     grads["dW"+str(L)]=dW_temp
     grads["db"+str(L)]=db_temp
+    
+    
     # grads1 is used for gradient check 
     grads1["W"+str(L)]=dW_temp
     grads1["b"+str(L)]=db_temp
@@ -190,6 +192,8 @@ def L_model_backward(AL,Y,caches):
         grads["dA"+str(i)]=dA_prev_temp
         grads["dW"+str(i+1)]=dW_temp
         grads["db"+str(i+1)]=db_temp
+        
+        
         # grads1 is used for gradient check 
         grads1["W"+str(i+1)]=dW_temp
         grads1["b"+str(i+1)]=db_temp
@@ -199,24 +203,24 @@ def L_model_backward(AL,Y,caches):
 def L_model_backward_with_dropout(AL,Y,caches,keep_prob):
     
     grads={}
-    L=len(caches) # For L=3 
+    L=len(caches)                         # For L=3 
     Y = Y.reshape(AL.shape)
-    dAL=np.divide(Y,AL)
-    dZ=AL-Y
-    grads["dA"+str(L)]=dAL # Than this is dA3
-    current_cache=caches[L-1]# This index into 2 (starts from 0
+    dAL=np.divide(Y,AL)                   # This is the output layer dA3
+    dZ=AL-Y                               # We compute dZ directly and feed To activation function 
+    grads["dA"+str(L)]=dAL                
+    current_cache=caches[L-1]             # This would obtain Layer 2 cache
     dA_prev, dW_temp, db_temp=linear_activation_backward(dZ,current_cache,"softmax") 
-    grads["dA"+str(L-1)]=dA_prev # This is than dA2
-    grads["dW"+str(L)]=dW_temp # This is dW3
-    grads["db"+str(L)]=db_temp
+    grads["dA"+str(L-1)]=dA_prev          # This would be dA2
+    grads["dW"+str(L)]=dW_temp            # This would be dW3
+    grads["db"+str(L)]=db_temp            # This would be db3
     for i in reversed(range(L-1)):
         
         current_cache,D = caches[i]
-        grads["dA"+str(i+1)]=(grads["dA"+str(i+1)]*D)/keep_prob # first loop: D2 and dA2, second loop D1 dA1
+        grads["dA"+str(i+1)]=(grads["dA"+str(i+1)]*D)/keep_prob                # first loop: D2 and dA2, second loop D1 dA1
         dA_prev, dW_temp, db_temp =linear_activation_backward(grads["dA"+str(i+1)],current_cache,"relu")
-        grads["dA"+str(i)]=dA_prev # first loop A1, second loop A0
-        grads["dW"+str(i+1)]=dW_temp # first loop dW2, second loop dW1
-        grads["db"+str(i+1)]=db_temp
+        grads["dA"+str(i)]=dA_prev        # first loop dA1, second loop dA0
+        grads["dW"+str(i+1)]=dW_temp      # first loop dW2, second loop dW1
+        grads["db"+str(i+1)]=db_temp      # first loop db2, second loop db1
         
     return grads
 
@@ -278,7 +282,7 @@ def initialize_adam(parameters):
         
     return v,s
 
-def update_parameters_with_adam(parameters,grads,v,s,t,learning_rate=0.01,beta1=0.9,beta2=0.999,epsilon=1e-8):
+def update_parameters_with_adam(parameters,grads,v,s,t,learning_rate,beta1=0.9,beta2=0.999,epsilon=1e-8):
     
     
     L=len(parameters)//2    # number of layers 

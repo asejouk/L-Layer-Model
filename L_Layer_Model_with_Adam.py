@@ -72,16 +72,17 @@ def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_
             else:
                 grads, grads1 =L_model_backward(AL,minibatch_Y,caches)
             
-            check +=1
+            #check +=1
             # Gradient Check 
-            if check == 100:
-                difference=gradient_check(parameters,grads1,minibatch_X,minibatch_Y)
+            #if check == 100:
+                #difference=gradient_check(parameters,grads1,minibatch_X,minibatch_Y)
         
-             Update Parameters
+            # Update Parameters
         
             t = t + 1 # Adam counter
             parameters, v, s = update_parameters_with_adam(parameters, grads, v, s,t, learning_rate)
-        
+            
+            #parameters= update_parameters(parameters,grads,learning_rate)
         
         # Print the cost every 100 training example
         if print_cost and i % 100 == 0: # print_cost(true) & i/100 with no leftover 
@@ -92,7 +93,7 @@ def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_
     # plot the cost
     plt.plot(np.squeeze(costs))
     plt.ylabel('cost')
-    plt.xlabel('iterations (per 100)')
+    plt.xlabel('iterations (x 5)')
     plt.title("Learning rate =" + str(learning_rate))
     plt.show()
     

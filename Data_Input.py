@@ -51,15 +51,13 @@ Y_test = convert_to_one_hot(Y_test_orig, 6)
 
 layers_dims=[12288,25,12,6]
 
-#parameters = model(X_train, Y_train, X_test, Y_test,layers_dims)
-
 learning_rate = 0.0001
 number_iter = 1500
 minibatch_size = 32 
-lambd = 3
-keep_prob =0.7
+lambd = 2
+keep_prob =1
 print_cost = True
-model = None 
+model = "L2_Reg"
 
 
 
