@@ -55,7 +55,7 @@ learning_rate = 0.0001
 number_iter = 1500
 minibatch_size = 32 
 lambd = 2
-keep_prob =1
+keep_prob =1.2
 print_cost = True
 model = "L2_Reg"
 
