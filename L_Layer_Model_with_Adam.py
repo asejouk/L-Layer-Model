@@ -97,6 +97,8 @@ def L_layer_model_with_adam(X_train,Y_train,layer_dims,learning_rate,mini_batch_
     plt.title("Learning rate =" + str(learning_rate))
     plt.show()
     
+    
+    # Ahmed 
 
     
     return parameters
